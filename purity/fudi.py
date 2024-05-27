@@ -56,7 +56,7 @@ def to_fudi(selector, *atoms):
 class FUDIProtocol(basic.LineReceiver):
     """
     FUDI protocol implementation in Python.
-    
+
     Simple ASCII based protocol from Miller Puckette for Pure Data.
     """
     #def connectionMade(self):
@@ -66,14 +66,14 @@ class FUDIProtocol(basic.LineReceiver):
 
     def lineReceived(self, data):
         if VERYVERBOSE:
-            print "FUDI: data:", data
+            print("FUDI: data:", data)
         try:
             message = data.split(";")[0].strip()
         except KeyError:
             log.msg("Got a line without trailing semi-colon.")
         else:
             if VERYVERBOSE:
-                print "FUDI: message:", message
+                print("FUDI: message:", message)
             atoms = message.split()
             if len(atoms) > 0:
                 output = []
@@ -81,7 +81,7 @@ class FUDIProtocol(basic.LineReceiver):
                 for atom in atoms[1:]:
                     atom = atom.strip()
                     if VERYVERBOSE:
-                        print "FUDI: > atom:", atom
+                        print("FUDI: > atom:", atom)
                     if atom.isdigit():
                         output.append(int(atom))
                     else:
@@ -92,14 +92,14 @@ class FUDIProtocol(basic.LineReceiver):
                             output.append(str(atom))
                 if self.factory.callbacks.has_key(selector):
                     if VERYVERBOSE:
-                        print "FUDI: Calling :", selector, output
+                        print("FUDI: Calling :", selector, output)
                     try:
                         self.factory.callbacks[selector](self, *output)
-                    except TypeError, e:
-                        print "FUDI:lineReceived():", e.message
+                    except TypeError as e:
+                        print("FUDI:lineReceived():", e.message)
                 else:
                     #log.msg("Invalid selector %s." % (selector))
-                    print "FUDI: Invalid selector %s." % (selector)
+                    print("FUDI: Invalid selector %s." % (selector))
 
     def send_message(self, selector, *atoms):
         """
@@ -107,7 +107,7 @@ class FUDIProtocol(basic.LineReceiver):
         :param data: list of basic types variables.
         """
         if VERYVERBOSE:
-            print "send_message", selector, atoms
+            print("send_message", selector, atoms)
         txt = to_fudi(selector, *atoms)
         if VERBOSE:
             print("FUDI: %s" % (txt.strip()))
@@ -116,7 +116,7 @@ class FUDIProtocol(basic.LineReceiver):
 class FUDIServerFactory(Factory):
     """
     Factory for FUDI receivers.
-    
+
     You should attach FUDI message callbacks to an instance of this.
     """
     protocol = FUDIProtocol
@@ -150,22 +150,22 @@ if __name__ == "__main__":
     VERYVERBOSE = True
 
     def ping(protocol, *args):
-        print "received ping", args
+        print("received ping", args)
         reactor.stop()
 
     def on_connected(protocol):
         protocol.send_message("ping", 1, 2.0, "bang")
-        print "sent ping"
+        print("sent ping")
 
     def on_error(failure):
-        print "Error trying to connect.", failure
+        print("Error trying to connect.", failure)
         reactor.stop()
-        
+
     PORT_NUMBER = 15555
 
     s = FUDIServerFactory()
     s.register_message("ping", ping)
     reactor.listenTCP(PORT_NUMBER, s)
-    
+
     create_FUDI_client('localhost', PORT_NUMBER).addCallback(on_connected).addErrback(on_error)
     reactor.run()

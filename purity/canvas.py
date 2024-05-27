@@ -23,16 +23,17 @@
 """
 Tools to create Pure Data objects and subpatches.
 
-This is meant to be used by any network library. The FUDI protocol 
-is in a separate module and is not used here. 
+This is meant to be used by any network library. The FUDI protocol
+is in a separate module and is not used here.
 
-See the client module for an implementation of this using the FUDI 
+See the client module for an implementation of this using the FUDI
 protocol for Twisted.
 
 One could write a non-asynchronous version of this. (no network here)
 """
-import random 
-from zope import interface
+import random
+#from zope import interface, implementer
+from zope.interface import Attribute, Interface, implementer
 
 VERBOSE = False
 VERY_VERBOSE = False
@@ -42,7 +43,7 @@ _gen_pos_indexes = {}
 def _gen_position(parent, be_random=False):
     """
     Generates positions for an object within a parent patch.
-    Keeps track of the previous object Y position using 
+    Keeps track of the previous object Y position using
     the memory address of the parent object as a key in the dict.
     """
     global _gen_pos_indexes
@@ -55,44 +56,45 @@ def _gen_position(parent, be_random=False):
     else:
         _gen_pos_indexes[parent_id] += increment # and then increment
         return [100, _gen_pos_indexes[parent_id]] # object pos
-    
-class IElement(interface.Interface):
+
+class IElement(Interface):
     """
     Any Pure Data Element. (e.g. box, connection, subpatch)
     """
-    parent = interface.Attribute("""A pointer to the parent Element.""")
+    parent = Attribute("""A pointer to the parent Element.""")
 
     def get_fudi(self):
         """
-        Returns a (Python) list of lists of (python-typed) atoms, or just a 
-        list of python-typed atoms. 
-        
+        Returns a (Python) list of lists of (python-typed) atoms, or just a
+        list of python-typed atoms.
+
         What I mean by "python-typed" is the built-in python types, such as
-        int, str, float, bool. 
-        
+        int, str, float, bool.
+
         It returns the FUDI message needed to create the element, and
         maybe its sub-elements. A FUDI creation message.
-        
+
         If it is a SubPatch, it returns a list of lists. (2D)
         Elements such as Obj and Msg return a one-dimension list. (1D)
 
-        That list must then be converted to real ASCII fudi using the 
+        That list must then be converted to real ASCII fudi using the
         fudi module.
         """
 
     def set_parent(self, obj):
         """
-        Sets the parent. 
+        Sets the parent.
         :param obj: An Element.
         """
-
+@implementer(IElement)
 class Box(object):
     """
     Base implementation of a Pure Data box.
     Pd defines four kinds of boxes, implemented as subclasses:
     object, message, gui object (unimplemented), and comment (unimplemented).
     """
-    interface.implements(IElement)
+
+    #interface.implements(IElement)
 
     # The message to send to tell Pd to create an object of this type.
     # Should be specified by the subclass.
@@ -162,17 +164,18 @@ class Receive(Obj):
 
     def send(self, *args):
         """
-        Returns a FUDI message suitable to be sent to that [receive] object. 
+        Returns a FUDI message suitable to be sent to that [receive] object.
         """
         if self.purity_client is not None:
             self.purity_client.send_message(self.receive_symbol, *args)
         return [self.receive_symbol] + args
 
+@implementer(IElement)
 class Connection(object):
     """
     Connection between two Pure Data objects.
     """
-    interface.implements(IElement)
+    #interface.implements(IElement)
     def __init__(self, from_object, from_outlet, to_object, to_inlet):
         self.parent = None
         self.from_object = from_object
@@ -185,20 +188,21 @@ class Connection(object):
         """
         Returns fudi creation list.
         """
-        # self.subpatch_name, 
+        # self.subpatch_name,
         return ["connect", self.from_object.id, self.from_outlet, self.to_object.id, self.to_inlet]
 
     def set_parent(self, obj):
         self.parent = obj
 
+@implementer(IElement)
 class SubPatch(object):
     """
-    Pure Data Subpatch. 
-    
+    Pure Data Subpatch.
+
     The default name is "__main__" for the [pd __main__] subpatch.
     It can be found in purity/data/dynamic_patch.pd
     """
-    interface.implements(IElement)
+    #interface.implements(IElement)
     def __init__(self, name, visible=False):
         self.parent = None
         self.name = name
@@ -207,10 +211,10 @@ class SubPatch(object):
         self.connections = []
         # self.pos = [0, 0]
         self.pos = _gen_position(self)
-    
+
     def set_parent(self, obj):
         self.parent = obj
-    
+
     def get_fudi(self):
         """
         Return FUDI lists for the whole subpatch.
@@ -218,14 +222,14 @@ class SubPatch(object):
         """
         result = []
         if self.name != "__main__":
-            # TODO: random position... 
+            # TODO: random position...
             # pos = _gen_position(self)
             pos = self.pos
             l = ["pd-%s" % (self.parent.name), "obj", pos[0], pos[1], "pd", self.name]
             result.append(l)
         if VERY_VERBOSE:
-            print "objects"
-        for obj in self.objects: 
+            print("objects")
+        for obj in self.objects:
             # obj.pos = # _gen_position(self)
             if type(obj) is SubPatch: # subpatch
                 result.extend(obj.get_fudi())
@@ -234,22 +238,22 @@ class SubPatch(object):
                 l.extend(obj.get_fudi())
                 result.append(l)
                 if VERY_VERBOSE:
-                    print l
+                    print(l)
         if VERY_VERBOSE:
-            print "connections"
+            print("connections")
         for conn in self.connections:
             l = ["pd-%s" % (self.name)]
             l.extend(conn.get_fudi())
             result.append(l)
             if VERY_VERBOSE:
-                print l
+                print(l)
         if not self.visible:
             l = ["pd-%s" % (self.name), "vis", 0]
             result.append(l)
             if VERY_VERBOSE:
-                print l
+                print(l)
         if VERY_VERBOSE:
-            print "done creating FUDI list"
+            print("done creating FUDI list")
         return result
 
     def subpatch(self, name, visible=False):
@@ -282,7 +286,7 @@ class SubPatch(object):
 
     def _add_object(self, obj):
         """
-        Common to self.obj(), self.subpatch() and self.receive(). 
+        Common to self.obj(), self.subpatch() and self.receive().
         """
         obj.id = len(self.objects)
         pos = _gen_position(self) # this is where position is decided.
@@ -290,7 +294,7 @@ class SubPatch(object):
         obj.set_position(*pos)
         self.objects.append(obj)
         return obj
-        
+
     def set_position(self, x, y):
         self.pos = [x, y]
 
@@ -301,7 +305,7 @@ class SubPatch(object):
         """
         obj = Receive(receive_symbol)
         return self._add_object(obj)
-    
+
     def connect(self, from_object, from_outlet, to_object, to_inlet):
         """
         Connects two objects together.
@@ -315,7 +319,7 @@ class SubPatch(object):
             conn = Connection(from_object, from_outlet, to_object, to_inlet)
             self.connections.append(conn)
             # conn.subpatch_name = self.name
-            
+
     def clear(self):
         """
         Returns a message to clear the subpatch.
@@ -349,7 +353,7 @@ if __name__ == "__main__":
     for test in [test_1]:
         test(main)
     print("------ test results ------")
-    li = main.get_fudi() 
+    li = main.get_fudi()
     for i in li:
         if len(i) == 0:
             print(fudi.to_fudi(i[0]).strip())

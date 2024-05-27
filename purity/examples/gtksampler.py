@@ -144,7 +144,7 @@ class Sampler(object):
         # ------------------- output
         self.output = Output(self.main_patch)
         self.current_player = 0
-    
+
     def record(self, table_index=0, start=True):
         print("send record?")
         self.recorder.record(table_index, start)
@@ -170,7 +170,7 @@ class Sampler(object):
 class SimpleSamplerApp(object):
     """
     Simple GTK2 GUI for the puresamler.
-    
+
     Defines the main window
     """
     def __init__(self, sampler=None):
@@ -206,7 +206,7 @@ class SimpleSamplerApp(object):
             self.play_buttons[i].connect("clicked", self.on_play, i)
             self.hboxes[i].pack_start(self.play_buttons[i], True, True, 0)
             self.play_buttons[i].show()
-            
+
             self.hboxes[i].show()
 
         self.lastbutton = gtk.Button("Quit")
@@ -226,13 +226,13 @@ class SimpleSamplerApp(object):
         Callback function for use when the button is pressed
         """
         #print "Button %s was pressed" % (info)
-        print "Rec %d" % (info)
+        print("Rec %d" % (info))
         if self.sampler is not None:
             self.sampler.record(int(info))
 
     def on_play(self, widget, info): # index as info
         #print "Button %s was pressed" % (info)
-        print "Play %d" % (info)
+        print("Play %d" % (info))
         if self.sampler is not None:
             self.sampler.play(int(info))
 
@@ -250,7 +250,7 @@ class SimpleSamplerApp(object):
             reactor.stop()
             #print("sys.exit(0)")
             #sys.exit(0) # TODO: kill child
-            
+
         print("Quit")
         if self.sampler.client is not None:
             deferred = self.sampler.client.quit()
@@ -278,4 +278,3 @@ if __name__ == "__main__":
     import subprocess
     print("Killing all running pd processes.") # FIXME
     subprocess.call("killall pd", shell=True)
-
