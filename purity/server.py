@@ -40,7 +40,7 @@ DYNAMIC_PATCH = os.path.join(os.path.dirname(purity.__file__), "data", "dynamic_
 
 #def run_command(command_str, variables_dict={}, die_on_ctrl_c=True):
 #    """
-#    Creates and launches a process. 
+#    Creates and launches a process.
 #
 #    Uses subprocess to launch a process. Blocking.
 #    When called, might throw a OSError or ValueError.
@@ -87,9 +87,9 @@ DYNAMIC_PATCH = os.path.join(os.path.dirname(purity.__file__), "data", "dynamic_
 
 class PureData(object):
     """
-    Launches Pure Data software. 
+    Launches Pure Data software.
     """
-    def __init__(self, rate=48000, listdev=True, inchannels=2, outchannels=2, verbose=True, driver="jack", nogui=False, blocking=True, patch=None, process_tool="subprocess", audioindev=None, audiooutdev=None):
+    def __init__(self, rate=44100, listdev=True, inchannels=2, outchannels=2, verbose=True, driver="portaudio", nogui=False, blocking=True, patch=None, process_tool="subprocess", audioindev=None, audiooutdev=None):
         global DYNAMIC_PATCH
         self.rate = rate
         self.listdev = listdev
@@ -102,7 +102,7 @@ class PureData(object):
         self.patch = patch
         self.audioindev = audioindev
         self.audiooutdev = audiooutdev
-        
+
         if self.patch is None: # default patch:
             self.patch = DYNAMIC_PATCH
         self.process_tool = process_tool
@@ -112,15 +112,22 @@ class PureData(object):
     def start(self):
         """
         Creates args and start pd.
-        
+
         Returns True
         Blocking.
         """
-        command = "pd"
+        command = "pd-gui"
         if self.driver == "jack":
             command += " -jack"
         elif self.driver == "alsa":
             command += " -alsa"
+            if self.audioindev is not None:
+                command += " -audioindev %d" % (self.audioindev)
+            if self.audiooutdev is not None:
+                command += " -audiooutdev %d" % (self.audiooutdev)
+            command += " -listdev"
+        elif self.driver == "portaudio":
+            command += " -portaudio"
             if self.audioindev is not None:
                 command += " -audioindev %d" % (self.audioindev)
             if self.audiooutdev is not None:
@@ -137,12 +144,12 @@ class PureData(object):
         #print("Using process tool %s" % (self.process_tool))
         if self.process_tool == "subprocess":
             run_command(command, variables_dict={}, die_on_ctrl_c=True)
-            #return True 
+            #return True
             return defer.succeed(True) # right now
         elif self.process_tool == "manager":
             #TODO: env vars
             self._process_manager = process.ProcessManager(
-                name="puredata", 
+                name="puredata",
                 command=command.split(),
                 verbose=True
                 )
@@ -151,14 +158,14 @@ class PureData(object):
             return d
         else:
             raise NotImplementedError("no such process tool")
-        
+
     def stop(self):
         raise NotImplementedError("This is still to be done.")
 
 #def fork_and_start_pd(**kwargs):
 #    """
-#    Please exit the program if pid value is 0 
-#    We return the pid 
+#    Please exit the program if pid value is 0
+#    We return the pid
 #    """
 #    pid = os.fork()
 #    if pid == 0: # child
@@ -187,4 +194,3 @@ def run_pd_manager(**kwargs):
     d.addErrback(_failure)
     #print("pd manager deferred: %s" % (d))
     return d
-

@@ -62,13 +62,13 @@ class FUDIProtocol(basic.LineReceiver):
     #def connectionMade(self):
     #    print "connection made", self.transport# , self.factory
 
-    delimiter = ';'
+    delimiter = b';'
 
     def lineReceived(self, data):
         if VERYVERBOSE:
             print("FUDI: data:", data)
         try:
-            message = data.split(";")[0].strip()
+            message = data.split(b";")[0].strip()
         except KeyError:
             log.msg("Got a line without trailing semi-colon.")
         else:
@@ -90,7 +90,7 @@ class FUDIProtocol(basic.LineReceiver):
                             output.append(atom)
                         except ValueError:
                             output.append(str(atom))
-                if self.factory.callbacks.has_key(selector):
+                if selector in self.factory.callbacks:
                     if VERYVERBOSE:
                         print("FUDI: Calling :", selector, output)
                     try:
@@ -111,7 +111,7 @@ class FUDIProtocol(basic.LineReceiver):
         txt = to_fudi(selector, *atoms)
         if VERBOSE:
             print("FUDI: %s" % (txt.strip()))
-        self.transport.write(txt)
+        self.transport.write(bytes(txt,encoding='utf8'))
 
 class FUDIServerFactory(Factory):
     """
@@ -151,7 +151,7 @@ if __name__ == "__main__":
 
     def ping(protocol, *args):
         print("received ping", args)
-        reactor.stop()
+        #reactor.stop()
 
     def on_connected(protocol):
         protocol.send_message("ping", 1, 2.0, "bang")
@@ -164,8 +164,8 @@ if __name__ == "__main__":
     PORT_NUMBER = 15555
 
     s = FUDIServerFactory()
-    s.register_message("ping", ping)
+    s.register_message(b"ping", ping)
     reactor.listenTCP(PORT_NUMBER, s)
 
-    create_FUDI_client('localhost', PORT_NUMBER).addCallback(on_connected).addErrback(on_error)
+    create_FUDI_client('127.0.0.1', PORT_NUMBER).addCallback(on_connected).addErrback(on_error)
     reactor.run()
